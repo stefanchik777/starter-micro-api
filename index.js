@@ -1,39 +1,50 @@
-// Подключение всех модулей к программе
-var express = require('express');
-var app = express();
-var server = require('http').createServer(app);
-var io = require('socket.io')(server);
+// Подключение к серверу
+var socket = io('http://127.0.0.1:3000');
 
-// Отслеживание порта
-server.listen(3000);
+// Получение доступа к элементам на странице
+var ball = document.getElementById('ball');
+var score = document.getElementById('score');
+var chat = document.getElementById('chat');
+var chatInput = document.getElementById('chatInput');
+var messages = document.getElementById('messages');
 
-// Отслеживание url адреса и отображение нужной HTML страницы
-app.get('/', function(request, respons) {
-	respons.sendFile(__dirname + '/index.html');
+// Функция для обновления позиции мяча
+function updateBallPosition(data) {
+    ball.style.left = data.x + 'px';
+    ball.style.top = data.y + 'px';
+}
+
+// Функция для обновления счета
+function updateScore(data) {
+    score.textContent = `Red: ${data.red} - ${data.blue} :Blue`;
+}
+
+// Функция для добавления сообщения в чат
+function addChatMessage(message) {
+    var newMessage = document.createElement('div');
+    newMessage.textContent = message;
+    messages.appendChild(newMessage);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+// Обработчик события движения мяча
+socket.on('ballPosition', updateBallPosition);
+
+// Обработчик события обновления счета
+socket.on('scoreUpdate', updateScore);
+
+// Обработчик события добавления сообщения в чат
+socket.on('chatMessage', addChatMessage);
+
+// Отправка сообщения в чат при нажатии Enter в поле ввода
+chatInput.addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+        socket.emit('chatMessage', chatInput.value);
+        chatInput.value = '';
+    }
 });
 
-// Массив со всеми подключениями
-connections = [];
-
-// Функция, которая сработает при подключении к странице
-// Считается как новый пользователь
-io.sockets.on('connection', function(socket) {
-	console.log("Успешное соединение");
-	// Добавление нового соединения в массив
-	connections.push(socket);
-
-	// Функция, которая срабатывает при отключении от сервера
-	socket.on('disconnect', function(data) {
-		// Удаления пользователя из массива
-		connections.splice(connections.indexOf(socket), 1);
-		console.log("Отключились");
-	});
-
-	// Функция получающая сообщение от какого-либо пользователя
-	socket.on('send mess', function(data) {
-		// Внутри функции мы передаем событие 'add mess',
-		// которое будет вызвано у всех пользователей и у них добавиться новое сообщение 
-		io.sockets.emit('add mess', {mess: data.mess, name: data.name, className: data.className});
-	});
-
-});
+// Пример отправки информации о движении мяча
+// Это должна быть логика, которая определяет, как пользователь управляет мячом
+// Например, можно использовать события мыши или клавиатуры
+// socket.emit('moveBall', { x: 100, y: 200, team: 'red' });
